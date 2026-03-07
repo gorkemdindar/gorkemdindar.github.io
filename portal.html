@@ -576,7 +576,10 @@
     showScreen('confirm');
   }
 
+  let forgotCooldown = false;
+
   async function doForgot() {
+    if (forgotCooldown) return;
     const email = document.getElementById('forgot-email').value.trim();
     if (!email) return showForgotAlert('E-posta adresi girin.', 'error');
     const btn = document.getElementById('btn-forgot');
@@ -585,10 +588,25 @@
     const { error } = await sb.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://lowcortisolgaming.com/portal.html'
     });
-    btn.disabled = false;
-    btn.innerHTML = '📬 Bağlantı Gönder';
-    if (error) return showForgotAlert(error.message, 'error');
+    if (error) {
+      btn.disabled = false;
+      btn.innerHTML = '📬 Bağlantı Gönder';
+      return showForgotAlert(error.message, 'error');
+    }
     showForgotAlert('✓ Bağlantı gönderildi! E-postanı kontrol et.', 'success');
+    // 60 second cooldown
+    forgotCooldown = true;
+    let secs = 60;
+    const timer = setInterval(() => {
+      secs--;
+      btn.innerHTML = `⏳ Tekrar gönder (${secs}s)`;
+      if (secs <= 0) {
+        clearInterval(timer);
+        forgotCooldown = false;
+        btn.disabled = false;
+        btn.innerHTML = '📬 Bağlantı Gönder';
+      }
+    }, 1000);
   }
 
   async function doReset() {
