@@ -456,6 +456,15 @@
               <button class="btn btn-red btn-sm" onclick="setServerStatus('offline')">✕ Durumu: Kapalı Yap</button>
             </div>
           </div>
+
+          <!-- Admin: clear start requests -->
+          <div id="requests-wrap" style="display:none;margin-top:16px;">
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--text-faint);letter-spacing:1px;">// BAŞLATMA İSTEKLERİ</span>
+            <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+              <span id="requests-count" style="font-size:12px;color:var(--text-dim);">yükleniyor...</span>
+              <button class="btn btn-ghost btn-sm" onclick="clearStartRequests()">✕ Temizle</button>
+            </div>
+          </div>
         </div>
 
         <!-- User: start request -->
@@ -628,11 +637,16 @@
     if (isAdmin) {
       document.getElementById('admin-badge').style.display = 'inline-block';
       document.getElementById('admin-nav').style.display   = 'block';
-      document.getElementById('ip-editor-wrap').style.display    = 'block';
-      document.getElementById('status-editor-wrap').style.display = 'block';
-      document.getElementById('requests-wrap').style.display      = 'block';
-      document.getElementById('user-start-wrap').style.display   = 'none';
-      document.getElementById('start-request-banner').style.display = 'none';
+      const ipWrap = document.getElementById('ip-editor-wrap');
+      const statusWrap = document.getElementById('status-editor-wrap');
+      const requestsWrap = document.getElementById('requests-wrap');
+      const userStart = document.getElementById('user-start-wrap');
+      const startBanner = document.getElementById('start-request-banner');
+      if (ipWrap) ipWrap.style.display = 'block';
+      if (statusWrap) statusWrap.style.display = 'block';
+      if (requestsWrap) requestsWrap.style.display = 'block';
+      if (userStart) userStart.style.display = 'none';
+      if (startBanner) startBanner.style.display = 'none';
     }
 
     // Show admin chat input
