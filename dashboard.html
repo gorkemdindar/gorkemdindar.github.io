@@ -252,6 +252,7 @@
     /* ── STARTING BANNER ── */
     .starting-banner-hidden{display:none!important;}
     .starting-banner-visible{display:flex;background:rgba(251,191,36,0.08);border:1px solid #713f12;border-left:3px solid var(--yellow);padding:16px 20px;margin-bottom:20px;align-items:center;gap:12px;}
+    .started-banner-visible{display:flex;background:rgba(74,222,128,0.08);border:1px solid var(--emerald-d);border-left:3px solid var(--emerald);padding:16px 20px;margin-bottom:20px;align-items:center;gap:12px;}
 
     /* RESPONSIVE */
     @media(max-width:768px){
@@ -376,12 +377,21 @@
           <button class="btn btn-green btn-sm" onclick="requestServerStart()" id="btn-request-start">▶ Sunucuyu Başlat</button>
         </div>
 
-        <!-- Starting countdown banner -->
+        <!-- Starting countdown banner (yellow) — shown immediately on button press -->
         <div id="starting-banner" class="starting-banner-hidden">
           <span style="font-size:18px;">⚙️</span>
           <div>
             <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--yellow);margin-bottom:4px;">SUNUCU BAŞLATIYOR</div>
-            <div style="font-size:13px;color:var(--text-dim);">Sunucu yaklaşık <strong style="color:var(--yellow)" id="countdown-text">30</strong> saniye içinde hazır olacak. Lütfen bekle...</div>
+            <div style="font-size:13px;color:var(--text-dim);">İstek alındı. Sunucu yükleniyor, lütfen bekle...</div>
+          </div>
+        </div>
+
+        <!-- Started banner (green) — shown when server comes online -->
+        <div id="started-banner" class="starting-banner-hidden">
+          <span style="font-size:18px;">✅</span>
+          <div>
+            <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--emerald);margin-bottom:4px;">SUNUCU HAZIR!</div>
+            <div style="font-size:13px;color:var(--text-dim);">Sunucu açıldı. Hemen bağlanabilirsin: <strong style="color:var(--emerald)" id="started-ip">—</strong></div>
           </div>
         </div>
 
@@ -767,21 +777,28 @@
       else el.style.color = '';
     });
 
-    // Show/hide start request banner for users
-    if (!isAdmin) {
-      const banner = document.getElementById('start-request-banner');
-      if (banner) banner.style.display = (status === 'offline') ? 'flex' : 'none';
-    }
+    // Banner logic — driven by realtime
+    const startReqBanner  = document.getElementById('start-request-banner');
+    const startingBanner  = document.getElementById('starting-banner');
+    const startedBanner   = document.getElementById('started-banner');
+    const startedIp       = document.getElementById('started-ip');
 
-    // Show/hide countdown banner
-    const startingBanner = document.getElementById('starting-banner');
-    const countdownText  = document.getElementById('countdown-text');
-    if (startingBanner) {
-      if (status === 'starting') {
-        startingBanner.className = 'starting-banner-visible';
-        if (countdownText) countdownText.textContent = countdown || '30';
-      } else {
-        startingBanner.className = 'starting-banner-hidden';
+    if (!isAdmin) {
+      if (status === 'offline') {
+        if (startReqBanner) startReqBanner.style.display = 'flex';
+        if (startingBanner) startingBanner.className = 'starting-banner-hidden';
+        if (startedBanner)  startedBanner.className  = 'starting-banner-hidden';
+      } else if (status === 'starting') {
+        if (startReqBanner) startReqBanner.style.display = 'none';
+        if (startingBanner) startingBanner.className = 'starting-banner-visible';
+        if (startedBanner)  startedBanner.className  = 'starting-banner-hidden';
+      } else if (status === 'online') {
+        if (startReqBanner) startReqBanner.style.display = 'none';
+        if (startingBanner) startingBanner.className = 'starting-banner-hidden';
+        if (startedBanner)  {
+          startedBanner.className = 'started-banner-visible';
+          if (startedIp) startedIp.textContent = ip;
+        }
       }
     }
 
@@ -840,6 +857,10 @@
     });
     if (!error) {
       startRequestCooldown = true;
+      // Show yellow banner immediately — don't wait for Python
+      document.getElementById('start-request-banner').style.display = 'none';
+      document.getElementById('starting-banner').className = 'starting-banner-visible';
+      document.getElementById('started-banner').className = 'starting-banner-hidden';
       btns.forEach(id => { const b = document.getElementById(id); if(b){b.disabled=true;b.textContent='✓ İstek Gönderildi';} });
       let secs = 120;
       const timer = setInterval(() => {
