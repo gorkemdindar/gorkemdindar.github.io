@@ -731,6 +731,13 @@
     // Broadcast banner handled by loadBroadcast()
   }
 
+  // ── ADMIN GUARD ──
+  async function verifyAdmin() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return false;
+    return session.user.email === ADMIN_EMAIL;
+  }
+
   // ── SERVER STATUS (admin) ──
   async function setServerStatus(status) {
     if (!await verifyAdmin()) return;
@@ -1043,8 +1050,6 @@
         <div class="chat-msg-text">${text}</div>
       </div>`;
     }).join('') + '<div class="chat-empty" id="chat-empty" style="display:none"></div>';
-    container.scrollTop = container.scrollHeight;
-    `).join('') + '<div class="chat-empty" id="chat-empty" style="display:none"></div>';
     container.scrollTop = container.scrollHeight;
   }
 
