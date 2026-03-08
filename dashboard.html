@@ -373,7 +373,7 @@
         </div>
 
         <!-- Starting countdown banner -->
-        <div id="starting-banner" style="display:none;background:rgba(251,191,36,0.08);border:1px solid #713f12;border-left:3px solid var(--yellow);padding:16px 20px;margin-bottom:20px;display:none;align-items:center;gap:12px;">
+        <div id="starting-banner" style="background:rgba(251,191,36,0.08);border:1px solid #713f12;border-left:3px solid var(--yellow);padding:16px 20px;margin-bottom:20px;display:none;align-items:center;gap:12px;">
           <span style="font-size:18px;">⚙️</span>
           <div>
             <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--yellow);margin-bottom:4px;">SUNUCU BAŞLATIYOR</div>
@@ -741,9 +741,9 @@
     const startingBanner = document.getElementById('starting-banner');
     const countdownText  = document.getElementById('countdown-text');
     if (startingBanner) {
-      if (status === 'starting' && countdown) {
+      if (status === 'starting') {
         startingBanner.style.display = 'flex';
-        if (countdownText) countdownText.textContent = countdown;
+        if (countdownText) countdownText.textContent = countdown || '30';
       } else {
         startingBanner.style.display = 'none';
       }
