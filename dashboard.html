@@ -249,6 +249,10 @@
     .report-alert{font-size:12px;color:var(--emerald);display:none;}
     .report-alert.show{display:block;}
 
+    /* ── STARTING BANNER ── */
+    .starting-banner-hidden{display:none!important;}
+    .starting-banner-visible{display:flex;background:rgba(251,191,36,0.08);border:1px solid #713f12;border-left:3px solid var(--yellow);padding:16px 20px;margin-bottom:20px;align-items:center;gap:12px;}
+
     /* RESPONSIVE */
     @media(max-width:768px){
       .layout{grid-template-columns:1fr;}
@@ -373,7 +377,7 @@
         </div>
 
         <!-- Starting countdown banner -->
-        <div id="starting-banner" style="background:rgba(251,191,36,0.08);border:1px solid #713f12;border-left:3px solid var(--yellow);padding:16px 20px;margin-bottom:20px;display:none;align-items:center;gap:12px;">
+        <div id="starting-banner" class="starting-banner-hidden">
           <span style="font-size:18px;">⚙️</span>
           <div>
             <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--yellow);margin-bottom:4px;">SUNUCU BAŞLATIYOR</div>
@@ -676,6 +680,38 @@
       await loadReports();
       await loadStartRequests();
     }
+
+    // ── REALTIME: Supabase pushes changes instantly ──
+    // Watch settings table (server_status, server_ip, broadcast, etc.)
+    sb.channel('settings-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' },
+        async () => {
+          await loadSettings();
+          await loadBroadcast();
+        }
+      )
+      .subscribe();
+
+    // Watch start requests (admin sees new requests instantly)
+    if (isAdmin) {
+      sb.channel('requests-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'baslat_istekleri' },
+          async () => { await loadStartRequests(); }
+        )
+        .subscribe();
+
+      sb.channel('pending-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bekleyen' },
+          async () => { await loadPending(); }
+        )
+        .subscribe();
+
+      sb.channel('reports-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'raporlar' },
+          async () => { await loadReports(); }
+        )
+        .subscribe();
+    }
   }
 
   // ── SETTINGS (server status, IP, broadcast) ──
@@ -742,10 +778,10 @@
     const countdownText  = document.getElementById('countdown-text');
     if (startingBanner) {
       if (status === 'starting') {
-        startingBanner.style.display = 'flex';
+        startingBanner.className = 'starting-banner-visible';
         if (countdownText) countdownText.textContent = countdown || '30';
       } else {
-        startingBanner.style.display = 'none';
+        startingBanner.className = 'starting-banner-hidden';
       }
     }
 
