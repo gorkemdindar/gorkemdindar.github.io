@@ -368,8 +368,8 @@
 
         <!-- Server start request for users -->
         <div class="request-banner" id="start-request-banner">
-          <p>Sunucu kapalı. <strong>Başlatılmasını istiyor musun?</strong> Admin bilgilendirilecektir.</p>
-          <button class="btn btn-green btn-sm" onclick="requestServerStart()" id="btn-request-start">▶ Başlatılmasını İste</button>
+          <p>Sunucu kapalı. <strong>Sunucuyu başlatmamızı istiyor musun?</strong> Admin bilgilendirilecektir.</p>
+          <button class="btn btn-green btn-sm" onclick="requestServerStart()" id="btn-request-start">▶ Sunucuyu Başlat</button>
         </div>
 
         <div class="server-card">
@@ -443,21 +443,17 @@
             </div>
           </div>
 
-          <!-- Admin: status toggle -->
+          <!-- Admin: server control -->
           <div id="status-editor-wrap" style="display:none;margin-top:16px;">
-            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--text-faint);letter-spacing:1px;">// DURUM GÜNCELLE</span>
-            <div style="display:flex;gap:10px;margin-top:10px;">
-              <button class="btn btn-green btn-sm" onclick="setServerStatus('online')">✓ Çevrimiçi Yap</button>
-              <button class="btn btn-red btn-sm" onclick="setServerStatus('offline')">✕ Çevrimdışı Yap</button>
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--text-faint);letter-spacing:1px;">// SUNUCU KONTROL</span>
+            <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+              <button class="btn btn-green btn-sm" onclick="sendAdminCommand('start')">▶ Başlat</button>
+              <button class="btn btn-red btn-sm" onclick="sendAdminCommand('stop')">■ Durdur</button>
+              <button class="btn btn-lava btn-sm" onclick="sendAdminCommand('restart')">↺ Yeniden Başlat</button>
             </div>
-          </div>
-
-          <!-- Admin: clear start requests -->
-          <div id="requests-wrap" style="display:none;margin-top:16px;">
-            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--text-faint);letter-spacing:1px;">// BAŞLATMA İSTEKLERİ</span>
-            <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-              <span id="requests-count" style="font-size:12px;color:var(--text-dim);">yükleniyor...</span>
-              <button class="btn btn-ghost btn-sm" onclick="clearStartRequests()">✕ Temizle</button>
+            <div style="margin-top:12px;display:flex;gap:10px;">
+              <button class="btn btn-green btn-sm" onclick="setServerStatus('online')">✓ Durumu: Açık Yap</button>
+              <button class="btn btn-red btn-sm" onclick="setServerStatus('offline')">✕ Durumu: Kapalı Yap</button>
             </div>
           </div>
         </div>
@@ -465,8 +461,8 @@
         <!-- User: start request -->
         <div id="user-start-wrap">
           <div class="request-banner">
-            <p>Sunucunun başlatılmasını isteyebilirsin. Admin bilgilendirilecektir.</p>
-            <button class="btn btn-green btn-sm" onclick="requestServerStart()" id="btn-request-start2">▶ Başlatılmasını İste</button>
+            <p>Sunucunun başlatılmasını talep edebilirsin. Admin bilgilendirilecektir.</p>
+            <button class="btn btn-green btn-sm" onclick="requestServerStart()" id="btn-request-start2">▶ Sunucuyu Başlat</button>
           </div>
         </div>
       </div>
@@ -597,10 +593,8 @@
   const SUPABASE_ANON = 'sb_publishable_xsEvj7SkmvIvuNky8TWIpg_Gdovm8Ju';
   const TABLE_APPROVED   = 'onay';
   const TABLE_PENDING    = 'bekleyen';
-  const TABLE_SETTINGS   = 'settings';
-  const TABLE_REPORTS    = 'raporlar';
-  const TABLE_REQUESTS   = 'baslat_istekleri';
-  const ADMIN_EMAIL      = 'gorkemdr50@gmail.com';
+  const TABLE_SETTINGS   = 'settings';     // key/value table for server status, IP, broadcast
+  const ADMIN_EMAIL      = 'gorkemdr50@gmail.com'; // 🔧 YOUR EMAIL HERE
 
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -608,13 +602,6 @@
   let currentUser  = null;
   let isAdmin      = false;
   let serverStatus = 'offline';
-
-  // ── SANITIZER ──
-  function sanitize(str) {
-    const div = document.createElement('div');
-    div.textContent = String(str || '');
-    return div.innerHTML;
-  }
 
   // ── INIT ──
   async function init() {
@@ -634,10 +621,8 @@
       document.getElementById('admin-nav').style.display   = 'block';
       document.getElementById('ip-editor-wrap').style.display    = 'block';
       document.getElementById('status-editor-wrap').style.display = 'block';
-      document.getElementById('requests-wrap').style.display      = 'block';
       document.getElementById('user-start-wrap').style.display   = 'none';
       document.getElementById('start-request-banner').style.display = 'none';
-      await loadStartRequests();
     }
 
     // Show admin chat input
@@ -682,10 +667,16 @@
     const broadcast = await getSetting('broadcast')     || '';
     serverStatus = status;
 
+    // Status display values
+    const isOnline   = status === 'online';
+    const isStarting = status === 'starting';
+    const statusLabel = isOnline ? 'AÇIK' : isStarting ? 'BAŞLATIYOR...' : 'KAPALI';
+    const statusSub   = isOnline ? 'çevrimiçi' : isStarting ? 'lütfen bekle' : 'çevrimdışı';
+
     // Overview
     document.getElementById('ov-ip').textContent = ip;
-    document.getElementById('ov-status').textContent = status === 'online' ? 'AÇIK' : 'KAPALI';
-    document.getElementById('ov-status-sub').textContent = status === 'online' ? 'çevrimiçi' : 'çevrimdışı';
+    document.getElementById('ov-status').textContent = statusLabel;
+    document.getElementById('ov-status-sub').textContent = statusSub;
 
     // Server page
     document.getElementById('srv-ip').textContent      = ip;
@@ -696,33 +687,27 @@
     // Status dots
     ['main-status-dot','srv-status-dot'].forEach(id => {
       const dot = document.getElementById(id);
-      dot.className = 'status-dot' + (status === 'online' ? ' online' : '');
+      dot.className = 'status-dot' + (isOnline ? ' online' : '');
     });
     ['main-status-text','srv-status-text'].forEach(id => {
       const el = document.getElementById(id);
-      el.textContent = status === 'online' ? 'AÇIK' : 'KAPALI';
-      el.className   = 'status-text' + (status === 'online' ? ' online' : '');
+      el.textContent = statusLabel;
+      el.className   = 'status-text' + (isOnline ? ' online' : '');
+      if (isStarting) el.style.color = 'var(--yellow)';
+      else el.style.color = '';
     });
 
     // Show/hide start request banner for users
     if (!isAdmin) {
       const banner = document.getElementById('start-request-banner');
-      if (banner) banner.style.display = status === 'offline' ? 'flex' : 'none';
+      if (banner) banner.style.display = (status === 'offline') ? 'flex' : 'none';
     }
 
     // Broadcast banner handled by loadBroadcast()
   }
 
-  // ── ADMIN GUARD ──
-  async function verifyAdmin() {
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return false;
-    return session.user.email === ADMIN_EMAIL;
-  }
-
   // ── SERVER STATUS (admin) ──
   async function setServerStatus(status) {
-    if (!await verifyAdmin()) return;
     const now = new Date().toLocaleString('tr-TR', {timeZone:'Europe/Istanbul'});
     await setSetting('server_status', status);
     await setSetting('status_updated', now);
@@ -730,9 +715,19 @@
     await loadSettings();
   }
 
+  // ── ADMIN SERVER COMMANDS ──
+  async function sendAdminCommand(cmd) {
+    if (!await verifyAdmin()) return;
+    const labels = { start: 'başlatılıyor', stop: 'durduruluyor', restart: 'yeniden başlatılıyor' };
+    if (!confirm(`Sunucu ${labels[cmd]}. Emin misin?`)) return;
+    await setSetting('admin_command', cmd);
+    showAlert('server-alert', `✓ Komut gönderildi: ${cmd.toUpperCase()}`, 'green');
+    if (cmd === 'start') await setSetting('server_status', 'starting');
+    await loadSettings();
+  }
+
   // ── UPDATE IP (admin) ──
   async function updateIP() {
-    if (!await verifyAdmin()) return;
     const val = document.getElementById('ip-input').value.trim();
     if (!val) return showAlert('server-alert', 'IP adresi boş olamaz.', 'red');
     await setSetting('server_ip', val);
@@ -741,36 +736,11 @@
   }
 
   // ── REQUEST SERVER START (user) ──
-  let startRequestCooldown = false;
-
   async function requestServerStart() {
-    if (startRequestCooldown) return;
     const btns = ['btn-request-start','btn-request-start2'];
     btns.forEach(id => { const b = document.getElementById(id); if(b){b.disabled=true;b.innerHTML='<span class="spinner"></span>Gönderiliyor...';} });
-    const { error } = await sb.from(TABLE_REQUESTS).insert({
-      username: currentUser.username,
-      email: currentUser.email,
-      requested_at: new Date().toISOString()
-    });
-    if (!error) {
-      startRequestCooldown = true;
-      btns.forEach(id => { const b = document.getElementById(id); if(b){b.disabled=true;b.textContent='✓ İstek Gönderildi';} });
-      // 5 min cooldown
-      let secs = 300;
-      const timer = setInterval(() => {
-        secs--;
-        btns.forEach(id => { const b = document.getElementById(id); if(b) b.textContent = `⏳ Tekrar gönder (${secs}s)`; });
-        if (secs <= 0) {
-          clearInterval(timer);
-          startRequestCooldown = false;
-          btns.forEach(id => { const b = document.getElementById(id); if(b){b.disabled=false;b.textContent='▶ Başlatılmasını İste';} });
-        }
-      }, 1000);
-    } else {
-      // Unique constraint hit = already sent a request
-      btns.forEach(id => { const b = document.getElementById(id); if(b){b.disabled=false;b.textContent='▶ Başlatılmasını İste';} });
-      showAlert('server-alert', 'Zaten bir istek gönderdin. Admin işleme alacaktır.', 'yellow');
-    }
+    await setSetting('start_request', currentUser.username + ' sunucunun başlatılmasını istedi — ' + new Date().toLocaleString('tr-TR', {timeZone:'Europe/Istanbul'}));
+    btns.forEach(id => { const b = document.getElementById(id); if(b){b.disabled=true;b.textContent='✓ İstek Gönderildi';} });
   }
 
   // ── LOAD APPROVED USERS (admin) ──
@@ -788,17 +758,16 @@
       return;
     }
     count.textContent = data.length + ' kullanıcı';
-    tbody.innerHTML = data.map(u => {
-      const username = sanitize(u.username || '—');
-      const email    = sanitize(u.email);
-      const date     = u.approved_at ? new Date(u.approved_at).toLocaleDateString('tr-TR') : '—';
-      return `<tr>
-        <td class="td-main">⛏ ${username}</td>
-        <td>${email}</td>
-        <td>${date}</td>
-        <td><button class="btn btn-red btn-sm" onclick="revokeUser(${JSON.stringify(u.email)}, ${JSON.stringify(u.username)})">✕ Erişimi Kaldır</button></td>
-      </tr>`;
-    }).join('');
+    tbody.innerHTML = data.map(u => `
+      <tr>
+        <td class="td-main">⛏ ${u.username || '—'}</td>
+        <td>${u.email}</td>
+        <td>${u.approved_at ? new Date(u.approved_at).toLocaleDateString('tr-TR') : '—'}</td>
+        <td>
+          <button class="btn btn-red btn-sm" onclick="revokeUser('${u.email}', '${u.username}')">✕ Erişimi Kaldır</button>
+        </td>
+      </tr>
+    `).join('');
   }
 
   // ── REVOKE USER (admin) ──
@@ -833,20 +802,17 @@
       return;
     }
     count.textContent = data.length + ' talep';
-    tbody.innerHTML = data.map(u => {
-      const username = sanitize(u.username || '—');
-      const email    = sanitize(u.email);
-      const date     = u.requested_at ? new Date(u.requested_at).toLocaleDateString('tr-TR') : '—';
-      return `<tr>
-        <td class="td-main">⛏ ${username}</td>
-        <td>${email}</td>
-        <td>${date}</td>
+    tbody.innerHTML = data.map(u => `
+      <tr>
+        <td class="td-main">⛏ ${u.username || '—'}</td>
+        <td>${u.email}</td>
+        <td>${u.requested_at ? new Date(u.requested_at).toLocaleDateString('tr-TR') : '—'}</td>
         <td style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-green btn-sm" onclick="approveUser(${JSON.stringify(u.email)}, ${JSON.stringify(u.username)})">✓ Onayla</button>
-          <button class="btn btn-red btn-sm" onclick="rejectUser(${JSON.stringify(u.email)}, ${JSON.stringify(u.username)})">✕ Reddet</button>
+          <button class="btn btn-green btn-sm" onclick="approveUser('${u.email}', '${u.username}')">✓ Onayla</button>
+          <button class="btn btn-red btn-sm" onclick="rejectUser('${u.email}', '${u.username}')">✕ Reddet</button>
         </td>
-      </tr>`;
-    }).join('');
+      </tr>
+    `).join('');
   }
 
   // ── APPROVE USER (admin) ──
@@ -869,25 +835,6 @@
     await loadPending();
   }
 
-  // ── START REQUESTS (admin) ──
-  async function loadStartRequests() {
-    const { data, error } = await sb.from(TABLE_REQUESTS).select('*').order('requested_at', { ascending: false });
-    const countEl = document.getElementById('requests-count');
-    if (!countEl) return;
-    if (!data || data.length === 0) {
-      countEl.textContent = 'Bekleyen istek yok.';
-      return;
-    }
-    countEl.textContent = `${data.length} istek — Son: ${data[0].username} (${new Date(data[0].requested_at).toLocaleString('tr-TR', {timeZone:'Europe/Istanbul'})})`;
-  }
-
-  async function clearStartRequests() {
-    if (!await verifyAdmin()) return;
-    await sb.from(TABLE_REQUESTS).delete().neq('id', 0);
-    await loadStartRequests();
-    showAlert('server-alert', '✓ Tüm başlatma istekleri temizlendi.', 'green');
-  }
-
   // ── BROADCAST (admin) ──
   async function loadBroadcast() {
     const msg = await getSetting('broadcast') || '';
@@ -904,7 +851,6 @@
   }
 
   async function sendBroadcast() {
-    if (!await verifyAdmin()) return;
     const text = document.getElementById('broadcast-text').value.trim();
     if (!text) return showAlert('broadcast-alert', 'Duyuru metni boş olamaz.', 'red');
     const btn = document.getElementById('btn-broadcast');
@@ -919,7 +865,6 @@
   }
 
   async function clearBroadcast() {
-    if (!await verifyAdmin()) return;
     await setSetting('broadcast', '');
     document.getElementById('current-broadcast-text').textContent = 'Aktif duyuru yok.';
     document.getElementById('announcement-banner').classList.remove('show');
@@ -933,36 +878,31 @@
 
   // ── REPORTS (admin) ──
   async function loadReports() {
-    const { data: reports, error } = await sb
-      .from(TABLE_REPORTS).select('*').order('created_at', { ascending: false });
+    const raw = await getSetting('reports') || '[]';
+    let reports = [];
+    try { reports = JSON.parse(raw); } catch { reports = []; }
     const tbody = document.getElementById('reports-tbody');
     const badge = document.getElementById('reports-badge');
     if (!tbody) return;
-    if (!reports || reports.length === 0) {
+    if (reports.length === 0) {
       tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Bildirim yok 🎉</td></tr>';
       if (badge) badge.style.display = 'none';
       return;
     }
     if (badge) { badge.textContent = reports.length; badge.style.display = 'inline-block'; }
-    tbody.innerHTML = reports.map(r => {
-      const user  = sanitize(r.username || '—');
-      const email = sanitize(r.email || '');
-      const topic = sanitize(r.topic);
-      const text  = sanitize(r.text);
-      const time  = r.created_at ? new Date(r.created_at).toLocaleString('tr-TR', {timeZone:'Europe/Istanbul'}) : '—';
-      return `<tr>
-        <td class="td-main">⛏ ${user}<br><span style="font-size:10px;color:var(--text-faint)">${email}</span></td>
-        <td><span class="tag tag-red">${topic}</span></td>
-        <td style="max-width:220px;white-space:pre-wrap;">${text}</td>
-        <td>${time}</td>
-      </tr>`;
-    }).join('');
+    tbody.innerHTML = reports.map(r => `
+      <tr>
+        <td class="td-main">⛏ ${r.user || '—'}<br><span style="font-size:10px;color:var(--text-faint)">${r.email||''}</span></td>
+        <td><span class="tag tag-red">${r.topic}</span></td>
+        <td style="max-width:220px;white-space:pre-wrap;">${r.text}</td>
+        <td>${r.time}</td>
+      </tr>
+    `).join('');
   }
 
   async function clearReports() {
-    if (!await verifyAdmin()) return;
     if (!confirm('Tüm bildirimler silinecek. Emin misin?')) return;
-    await sb.from(TABLE_REPORTS).delete().neq('id', 0);
+    await setSetting('reports', '[]');
     showAlert('reports-alert', '✓ Tüm bildirimler temizlendi.', 'green');
     await loadReports();
   }
@@ -1017,14 +957,12 @@
       return;
     }
     empty.style.display = 'none';
-    container.innerHTML = msgs.map(m => {
-      const text = sanitize(m.text);
-      const time = sanitize(m.time);
-      return `<div class="chat-msg">
-        <div class="chat-msg-meta">${time}</div>
-        <div class="chat-msg-text">${text}</div>
-      </div>`;
-    }).join('') + '<div class="chat-empty" id="chat-empty" style="display:none"></div>';
+    container.innerHTML = msgs.map(m => `
+      <div class="chat-msg">
+        <div class="chat-msg-meta">${m.time}</div>
+        <div class="chat-msg-text">${m.text}</div>
+      </div>
+    `).join('') + '<div class="chat-empty" id="chat-empty" style="display:none"></div>';
     container.scrollTop = container.scrollHeight;
   }
 
@@ -1091,33 +1029,26 @@
     const alertEl = document.getElementById('report-alert');
     if (!selectedTopic) { alertEl.textContent = 'Konu seç!'; alertEl.className='report-alert show'; return; }
     if (!text) { alertEl.textContent = 'Açıklama yaz!'; alertEl.className='report-alert show'; return; }
-    if (text.length > 1000) { alertEl.textContent = 'Açıklama en fazla 1000 karakter olabilir.'; alertEl.className='report-alert show'; return; }
     const btn = document.getElementById('btn-report-send');
     btn.disabled = true; btn.textContent = '...';
-    const { error } = await sb.from(TABLE_REPORTS).insert({
-      username: currentUser.username,
+    const raw = await getSetting('reports') || '[]';
+    let reports = [];
+    try { reports = JSON.parse(raw); } catch { reports = []; }
+    reports.unshift({
+      user: currentUser.username,
       email: currentUser.email,
       topic: selectedTopic,
       text,
+      time: new Date().toLocaleString('tr-TR', {timeZone:'Europe/Istanbul'})
     });
-    if (!error) {
+    const ok = await setSetting('reports', JSON.stringify(reports));
+    btn.disabled = false; btn.textContent = 'Gönder →';
+    if (ok) {
       alertEl.textContent = '✓ Gönderildi!';
       alertEl.style.color = 'var(--emerald)';
       alertEl.className = 'report-alert show';
-      // 60s cooldown on report button
-      let secs = 60;
-      const timer = setInterval(() => {
-        secs--;
-        btn.textContent = `⏳ (${secs}s)`;
-        if (secs <= 0) {
-          clearInterval(timer);
-          btn.disabled = false;
-          btn.textContent = 'Gönder →';
-        }
-      }, 1000);
       setTimeout(() => closeReport(), 1500);
     } else {
-      btn.disabled = false; btn.textContent = 'Gönder →';
       alertEl.textContent = '❌ Hata oluştu, tekrar dene.';
       alertEl.style.color = 'var(--red)';
       alertEl.className = 'report-alert show';
